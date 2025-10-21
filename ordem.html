@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista de Convidados</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f9f9f9;
+    }
+
+    h3, h4 {
+      margin-bottom: 5px;
+    }
+
+    .listas-container {
+      display: flex;
+      gap: 40px;
+      margin-top: 10px;
+      flex-wrap: wrap; /* permite quebrar linha em telas menores */
+    }
+
+    ul {
+      border: 1px solid #ccc;
+      padding: 10px;
+      min-width: 200px;
+      flex: 1; /* faz cada lista ocupar espaço igual */
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    ul li {
+      margin: 4px 0;
+    }
+
+    .contador {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    textarea {
+      width: 100%;
+      max-width: 400px;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      resize: vertical;
+    }
+
+    button {
+      margin-right: 5px;
+      margin-top: 5px;
+      cursor: pointer;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      background-color: #007bff;
+      color: white;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button[onclick*="LimparTudo"] {
+      background-color: #ff5555;
+    }
+
+    /* 📱 Responsividade para telas menores */
+    @media (max-width: 600px) {
+      .listas-container {
+        flex-direction: column; /* coloca as listas uma embaixo da outra */
+        align-items: center;
+      }
+
+      ul {
+        width: 90%; /* ocupa quase toda a largura do celular */
+        min-width: unset;
+      }
+
+      textarea {
+        width: 90%;
+      }
+
+      button {
+        width: 90%;
+        margin-top: 8px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h3>Lista de Convidados</h3>
+
+  <div class="listas-container">
+    <div>
+      <h4>Lista Numerada</h4>
+      <ul id="presentes">Nenhum convidado na lista.</ul>
+    </div>
+
+    <div>
+      <h4>Lista Simples</h4>
+      <ul id="presentesSimples">Nenhum convidado na lista.</ul>
+    </div>
+  </div>
+
+  <p class="contador">Total de nomes: <span id="total">0</span></p>
+
+  <h4>Inserir Convidados</h4>
+  <textarea id="convidado" rows="6" placeholder="Digite um nome por linha"></textarea><br>
+  <button type="button" onClick="InsereConvidado();">Inserir</button>
+  <button type="button" onClick="Ordenar();">Ordenar</button>
+  <button type="button" onClick="OrdenarInvertido();">Ordenar Invertido</button>
+  <button type="button" onClick="LimparTudo();">Limpar Tudo</button>
+
+  <script>
+    var convidados = [];
+
+    function InsereConvidado() {
+      var texto = document.getElementById("convidado").value;
+      if (texto.trim() !== '') {
+        var novosConvidados = texto.split('\n')
+          .map(nome => nome.trim())
+          .filter(nome => nome !== '');
+        convidados.push(...novosConvidados);
+        document.getElementById("convidado").value = '';
+        AtualizaLista();
+      }
+    }
+
+    function Ordenar() {
+      convidados.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      AtualizaLista();
+    }
+
+    function OrdenarInvertido() {
+      convidados.sort((a, b) => b.localeCompare(a, 'pt-BR'));
+      AtualizaLista();
+    }
+
+    function LimparTudo() {
+      convidados = [];
+      document.getElementById("convidado").value = '';
+      AtualizaLista();
+    }
+
+    function AtualizaLista() {
+      let listaNum = document.getElementById("presentes");
+      let listaSimples = document.getElementById("presentesSimples");
+      let total = document.getElementById("total");
+
+      if (convidados.length > 0) {
+        listaNum.innerHTML = "";
+        listaSimples.innerHTML = "";
+
+        convidados.forEach((nome, i) => {
+          listaNum.innerHTML += `<li>${i + 1}. ${nome}</li>`;
+          listaSimples.innerHTML += `<li>${nome}</li>`;
+        });
+
+        total.textContent = convidados.length;
+      } else {
+        listaNum.innerHTML = "Nenhum convidado na lista.";
+        listaSimples.innerHTML = "Nenhum convidado na lista.";
+        total.textContent = 0;
+      }
+    }
+  </script>
+</body>
+</html>
