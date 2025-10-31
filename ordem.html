@@ -1,175 +1,227 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lista de Convidados</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lista de Convidados — com Totais</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #f9f9f9;
-    }
-
-    h3, h4 {
-      margin-bottom: 5px;
-    }
-
-    .listas-container {
-      display: flex;
-      gap: 40px;
-      margin-top: 10px;
-      flex-wrap: wrap; /* permite quebrar linha em telas menores */
-    }
-
-    ul {
-      border: 1px solid #ccc;
-      padding: 10px;
-      min-width: 200px;
-      flex: 1; /* faz cada lista ocupar espaço igual */
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    ul li {
-      margin: 4px 0;
-    }
-
-    .contador {
-      margin-top: 10px;
-      font-weight: bold;
-    }
-
-    textarea {
-      width: 100%;
-      max-width: 400px;
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      resize: vertical;
-    }
-
-    button {
-      margin-right: 5px;
-      margin-top: 5px;
-      cursor: pointer;
-      padding: 6px 12px;
-      border: none;
-      border-radius: 6px;
-      background-color: #007bff;
-      color: white;
-      transition: 0.2s;
-    }
-
-    button:hover {
-      opacity: 0.9;
-    }
-
-    button[onclick*="LimparTudo"] {
-      background-color: #ff5555;
-    }
-
-    /* 📱 Responsividade para telas menores */
-    @media (max-width: 600px) {
-      .listas-container {
-        flex-direction: column; /* coloca as listas uma embaixo da outra */
-        align-items: center;
-      }
-
-      ul {
-        width: 90%; /* ocupa quase toda a largura do celular */
-        min-width: unset;
-      }
-
-      textarea {
-        width: 90%;
-      }
-
-      button {
-        width: 90%;
-        margin-top: 8px;
-      }
-    }
+    body{font-family:Arial;margin:20px;background:#f9f9f9}
+    .listas-container{display:flex;gap:24px;flex-wrap:wrap}
+    .card{background:#fff;padding:12px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.08); width:320px}
+    ul{list-style:none;padding:0;margin:0}
+    ul li{margin:6px 0}
+    textarea{width:100%;max-width:760px;padding:8px;border-radius:6px;border:1px solid #ccc;resize:vertical}
+    button{margin:6px 6px 0 0;padding:8px 12px;border-radius:6px;border:none;background:#007bff;color:white;cursor:pointer}
+    .muted{color:#666;font-size:0.9rem}
+    .total-value{font-weight:bold;margin-top:8px}
+    @media (max-width:900px){.listas-container{flex-direction:column;align-items:center}.card{width:92%}}
   </style>
 </head>
-
 <body>
-  <h3>Lista de Convidados</h3>
+  <h3>Lista de Convidados — limpeza ao inserir + totais</h3>
 
   <div class="listas-container">
-    <div>
+    <div class="card">
       <h4>Lista Numerada</h4>
       <ul id="presentes">Nenhum convidado na lista.</ul>
     </div>
 
-    <div>
-      <h4>Lista Simples</h4>
+    <div class="card">
+      <h4>Lista Simples (apenas nomes)</h4>
       <ul id="presentesSimples">Nenhum convidado na lista.</ul>
+    </div>
+
+    <div class="card">
+      <h4>Totais por Valor</h4>
+      <div id="totaisResumo">Nenhum valor detectado.</div>
+      <div class="total-value" id="totalGeral"></div>
     </div>
   </div>
 
-  <p class="contador">Total de nomes: <span id="total">0</span></p>
+  <p class="muted">Total de nomes: <span id="total">0</span></p>
 
   <h4>Inserir Convidados</h4>
-  <textarea id="convidado" rows="6" placeholder="Digite um nome por linha"></textarea><br>
-  <button type="button" onClick="InsereConvidado();">Inserir</button>
-  <button type="button" onClick="Ordenar();">Ordenar</button>
-  <button type="button" onClick="OrdenarInvertido();">Ordenar Invertido</button>
-  <button type="button" onClick="LimparTudo();">Limpar Tudo</button>
+  <textarea id="convidado" rows="8" placeholder="Cole sua lista aqui (um por linha)"></textarea><br>
+  <button id="btnInserir">Inserir (limpa ao inserir)</button>
+  <button id="btnOrdenar">Ordenar (A→Z)</button>
+  <button id="btnOrdenarInv">Ordenar Invertido (Z→A)</button>
+  <button id="btnLimpar">Limpar Tudo</button>
 
-  <script>
-    var convidados = [];
+<script>
+  // guarda objetos { name, key, amount } — name limpo, key para ordenar, amount = number|null
+  let convidados = [];
 
-    function InsereConvidado() {
-      var texto = document.getElementById("convidado").value;
-      if (texto.trim() !== '') {
-        var novosConvidados = texto.split('\n')
-          .map(nome => nome.trim())
-          .filter(nome => nome !== '');
-        convidados.push(...novosConvidados);
-        document.getElementById("convidado").value = '';
-        AtualizaLista();
-      }
+  function titleCase(s) {
+    return s.split(' ')
+            .map(w => w ? (w[0].toUpperCase() + w.slice(1).toLowerCase()) : '')
+            .join(' ');
+  }
+
+  // limpa linha: remove prefixos numéricos, caracteres invisíveis, pontuações nas bordas, múltiplos espaços
+  function limpaLinha(line) {
+    if (!line) return '';
+
+    let s = line;
+
+    // remove caracteres invisíveis / zero-width
+    s = s.replace(/[\u200B-\u200D\uFEFF]/g, '');
+
+    // remove prefixos numéricos com . ) - etc (ex: "1.", "10)", "3 - ")
+    s = s.replace(/^\s*\d+[\.\)\-\:\s]*/g, '');
+
+    // remove pontuação inicial/final que não seja letra, espaço, hífen ou apóstrofo
+    s = s.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ'’-]+|[^A-Za-zÀ-ÖØ-öø-ÿ'’-]+$/g, '');
+
+    // colapsa múltiplos espaços
+    s = s.replace(/\s+/g, ' ').trim();
+
+    return s;
+  }
+
+  // extrai valor numérico acompanhado de $ (procura por dígitos próximos de $ em qualquer parte da linha)
+  // retorna número inteiro (ex: "20" para "20$"), ou null se não encontrar
+  function extraiValor(line) {
+    if (!line) return null;
+    // tenta achar padrão digit(s) + optional spaces + $  (ex: "20$", "20 $", "Martin25$")
+    // usamos global regex não necessário, só pegar o primeiro match
+    const m1 = line.match(/(\d+(?:[.,]\d+)?)\s*\$/); // captura decimais com , ou .
+    if (m1) {
+      // normaliza vírgula para ponto, pega parte inteira ou decimal
+      return Number(m1[1].replace(',', '.'));
+    }
+    // se não encontrou "$", tenta pegar número próximo ao final (ex: "Martin25" ou "Martin25$")
+    const m2 = line.match(/(\d+(?:[.,]\d+)?)(?=\s*$)/);
+    if (m2) {
+      return Number(m2[1].replace(',', '.'));
+    }
+    return null;
+  }
+
+  // chave para ordenar: remove acentos e minúscula
+  function chaveOrdenacao(displayName) {
+    if (!displayName) return '';
+    return displayName.normalize("NFD").replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  }
+
+  // Inserção: extrai valor e salva apenas nome limpo + amount
+  function InsereConvidado() {
+    const texto = document.getElementById('convidado').value;
+    if (!texto || !texto.trim()) return;
+
+    const linhas = texto.split(/\r?\n/);
+    const novos = [];
+
+    for (let raw of linhas) {
+      const trimmed = raw.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+      if (!trimmed) continue;
+
+      const amount = extraiValor(trimmed); // número ou null
+      const cleaned = limpaLinha(trimmed);
+      if (!cleaned) continue; // se sobrou vazio, ignora
+
+      const display = titleCase(cleaned);
+      novos.push({ name: display, key: chaveOrdenacao(display), amount: amount });
     }
 
-    function Ordenar() {
-      convidados.sort((a, b) => a.localeCompare(b, 'pt-BR'));
-      AtualizaLista();
+    if (novos.length === 0) {
+      alert('Nenhum nome válido detectado (linhas com apenas números/valores foram ignoradas).');
+      document.getElementById('convidado').value = '';
+      return;
     }
 
-    function OrdenarInvertido() {
-      convidados.sort((a, b) => b.localeCompare(a, 'pt-BR'));
-      AtualizaLista();
+    convidados.push(...novos);
+    document.getElementById('convidado').value = '';
+    AtualizaLista();
+  }
+
+  function Ordenar() {
+    convidados.sort((a, b) => {
+      if (a.key === b.key) return a.name.localeCompare(b.name, 'pt-BR');
+      return a.key.localeCompare(b.key, 'pt-BR');
+    });
+    AtualizaLista();
+  }
+
+  function OrdenarInvertido() {
+    convidados.sort((a, b) => {
+      if (a.key === b.key) return b.name.localeCompare(a.name, 'pt-BR');
+      return b.key.localeCompare(a.key, 'pt-BR');
+    });
+    AtualizaLista();
+  }
+
+  function LimparTudo() {
+    convidados = [];
+    document.getElementById('convidado').value = '';
+    AtualizaLista();
+  }
+
+  // calcula e formata os totais por valor e total geral
+  function calculaTotais() {
+    const resumo = {}; // chave = valor (ex: 20), valor = { count, subtotal }
+    let totalGeral = 0;
+    for (const item of convidados) {
+      const v = item.amount;
+      if (v == null || isNaN(v)) continue;
+      const key = Number(v); // usa número como chave
+      if (!resumo[key]) resumo[key] = { count: 0, subtotal: 0 };
+      resumo[key].count += 1;
+      resumo[key].subtotal += Number(v);
+      totalGeral += Number(v);
+    }
+    return { resumo, totalGeral };
+  }
+
+  function AtualizaLista() {
+    const listaNum = document.getElementById('presentes');
+    const listaSimples = document.getElementById('presentesSimples');
+    const total = document.getElementById('total');
+    const totaisResumo = document.getElementById('totaisResumo');
+    const totalGeralEl = document.getElementById('totalGeral');
+
+    if (convidados.length === 0) {
+      listaNum.innerHTML = 'Nenhum convidado na lista.';
+      listaSimples.innerHTML = 'Nenhum convidado na lista.';
+      totaisResumo.innerHTML = 'Nenhum valor detectado.';
+      totalGeralEl.textContent = '';
+      total.textContent = '0';
+      return;
     }
 
-    function LimparTudo() {
-      convidados = [];
-      document.getElementById("convidado").value = '';
-      AtualizaLista();
+    // listas de nomes
+    listaNum.innerHTML = '';
+    listaSimples.innerHTML = '';
+    convidados.forEach((item, idx) => {
+      // mostra índice e nome; se preferir, pode mostrar também o valor ao lado na numerada
+      listaNum.innerHTML += `<li>${idx+1}. ${item.name}${item.amount != null ? (' — ' + item.amount + '$') : ''}</li>`;
+      listaSimples.innerHTML += `<li>${item.name}</li>`;
+    });
+    total.textContent = String(convidados.length);
+
+    // totais
+    const { resumo, totalGeral } = calculaTotais();
+    if (Object.keys(resumo).length === 0) {
+      totaisResumo.innerHTML = 'Nenhum valor detectado.';
+      totalGeralEl.textContent = '';
+      return;
     }
-
-    function AtualizaLista() {
-      let listaNum = document.getElementById("presentes");
-      let listaSimples = document.getElementById("presentesSimples");
-      let total = document.getElementById("total");
-
-      if (convidados.length > 0) {
-        listaNum.innerHTML = "";
-        listaSimples.innerHTML = "";
-
-        convidados.forEach((nome, i) => {
-          listaNum.innerHTML += `<li>${i + 1}. ${nome}</li>`;
-          listaSimples.innerHTML += `<li>${nome}</li>`;
-        });
-
-        total.textContent = convidados.length;
-      } else {
-        listaNum.innerHTML = "Nenhum convidado na lista.";
-        listaSimples.innerHTML = "Nenhum convidado na lista.";
-        total.textContent = 0;
-      }
+    // ordena chaves numéricas ascendentes
+    const keys = Object.keys(resumo).map(Number).sort((a,b)=>a-b);
+    let html = '<ul>';
+    for (const k of keys) {
+      const r = resumo[k];
+      html += `<li>${k}$ — ${r.count}x → Subtotal: ${ (r.subtotal).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:2}) }$</li>`;
     }
-  </script>
+    html += '</ul>';
+    totaisResumo.innerHTML = html;
+    totalGeralEl.textContent = `Total geral: ${ totalGeral.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:2}) }$`;
+  }
+
+  // event listeners
+  document.getElementById('btnInserir').addEventListener('click', InsereConvidado);
+  document.getElementById('btnOrdenar').addEventListener('click', Ordenar);
+  document.getElementById('btnOrdenarInv').addEventListener('click', OrdenarInvertido);
+  document.getElementById('btnLimpar').addEventListener('click', LimparTudo);
+</script>
 </body>
 </html>
